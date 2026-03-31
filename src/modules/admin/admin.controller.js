@@ -54,9 +54,19 @@ exports.toggleUserStatus = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
     try {
-        const filters = req.query; // can contain period: 'daily', 'monthly', 'yearly', 'all'
+        const filters = req.query; // period: daily, monthly, yearly, all
         const stats = await adminService.getStats(filters);
-        return successResponse(res, 'Dashboard stats', stats);
+        return successResponse(res, 'Dashboard stats retrieved', stats);
+    } catch (error) {
+        return errorResponse(res, error.message);
+    }
+};
+
+exports.getTransactionHistory = async (req, res) => {
+    try {
+        const filters = req.query; // date_start, date_end
+        const history = await adminService.getHistory(filters);
+        return successResponse(res, 'Transaction history retrieved', history);
     } catch (error) {
         return errorResponse(res, error.message);
     }

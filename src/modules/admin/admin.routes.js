@@ -15,7 +15,8 @@ router.delete('/users/:id', adminController.deleteUser);
 router.put('/users/:id/reset-password', adminController.resetPassword);
 router.put('/users/:id/status', adminController.toggleUserStatus);
 
-// Stats
+// Stats & History
 router.get('/stats', adminController.getDashboardStats);
+router.get('/history', adminController.getTransactionHistory);
 
 module.exports = router;

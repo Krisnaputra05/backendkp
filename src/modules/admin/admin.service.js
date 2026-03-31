@@ -160,3 +160,49 @@ exports.getStats = async (filters = {}) => {
     };
 };
 
+exports.getHistory = async (filters = {}) => {
+    const { date_start, date_end } = filters;
+
+    let builder = supabase
+        .from('queue_sessions')
+        .select(`
+            id_session,
+            queue_number,
+            status,
+            created_at,
+            closed_at,
+            payments (
+                amount_paid,
+                change_amount,
+                method
+            ),
+            orders (
+                final_amount
+            )
+        `)
+        .eq('status', 'completed');
+
+    if (date_start) builder = builder.gte('created_at', date_start);
+    if (date_end) builder = builder.lte('created_at', date_end);
+
+    const { data, error } = await builder.order('closed_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    // Format for easier UI consumption
+    return data.map(sess => {
+        const payment = sess.payments && sess.payments.length > 0 ? sess.payments[0] : null;
+        const totalBill = sess.orders.reduce((sum, o) => sum + Number(o.final_amount), 0);
+
+        return {
+            id_session: sess.id_session,
+            queue_number: sess.queue_number,
+            total_bill: totalBill,
+            amount_paid: payment ? payment.amount_paid : 0,
+            change: payment ? payment.change_amount : 0,
+            method: payment ? payment.method : 'N/A',
+            closed_at: sess.closed_at
+        };
+    });
+};
+

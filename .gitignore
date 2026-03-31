@@ -40,3 +40,4 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+MASTER_ADMIN_API_CONTRACT.md
