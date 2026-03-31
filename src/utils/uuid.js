@@ -1,6 +1,5 @@
-const { v4: uuidv4 } = require('uuid');
-
-const generateUUID = () => {
+const generateUUID = async () => {
+  const { v4: uuidv4 } = await import("uuid");
   return uuidv4();
 };
 
