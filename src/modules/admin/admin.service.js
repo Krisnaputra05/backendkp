@@ -115,10 +115,13 @@ exports.getStats = async (filters = {}) => {
     let totalDiscounts = 0;
     
     payments.forEach(p => {
+        // Safe access: Supabase might return join results as object or array
+        const orderData = Array.isArray(p.orders) ? p.orders[0] : p.orders;
+
         // Omzet asli restorasi = final_amount di tabel orders (jika ada) ATAU uang dibayar dikurangi kembalian
-        const trueOmzet = (p.orders && p.orders.final_amount) 
-                          ? Number(p.orders.final_amount) 
-                          : Number(p.amount_paid) - Number(p.change_amount || 0);
+        const trueOmzet = (orderData && orderData.final_amount) 
+                          ? Number(orderData.final_amount) 
+                          : Number(p.amount_paid || 0) - Number(p.change_amount || 0);
 
         totalOmzet += trueOmzet;
 
@@ -126,8 +129,8 @@ exports.getStats = async (filters = {}) => {
         if (p.method === 'cash') totalCash += trueOmzet;
         else totalNonCash += trueOmzet;
         
-        if (p.orders && p.orders.discount_amount) {
-            totalDiscounts += Number(p.orders.discount_amount);
+        if (orderData && orderData.discount_amount) {
+            totalDiscounts += Number(orderData.discount_amount);
         }
     });
 
@@ -136,11 +139,14 @@ exports.getStats = async (filters = {}) => {
 
     const productSales = {};
     items.forEach(item => {
-        if (item.orders && item.orders.status === 'cancelled') return;
+        const orderData = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+        if (orderData && orderData.status === 'cancelled') return;
         
-        const pName = item.products ? item.products.name : 'Unknown';
+        const productData = Array.isArray(item.products) ? item.products[0] : item.products;
+        const pName = productData ? productData.name : 'Unknown';
+        
         if (!productSales[pName]) productSales[pName] = { qty: 0, revenue: 0 };
-        productSales[pName].qty += Number(item.qty);
+        productSales[pName].qty += Number(item.qty || 0);
         productSales[pName].revenue += Number(item.subtotal || 0);
     });
 
@@ -191,15 +197,20 @@ exports.getHistory = async (filters = {}) => {
 
     // Format for easier UI consumption
     return data.map(sess => {
-        const payment = sess.payments && sess.payments.length > 0 ? sess.payments[0] : null;
-        const totalBill = sess.orders.reduce((sum, o) => sum + Number(o.final_amount), 0);
+        // Safe access for payments
+        const paymentsArray = Array.isArray(sess.payments) ? sess.payments : (sess.payments ? [sess.payments] : []);
+        const payment = paymentsArray.length > 0 ? paymentsArray[0] : null;
+
+        // Safe access for orders
+        const ordersArray = Array.isArray(sess.orders) ? sess.orders : (sess.orders ? [sess.orders] : []);
+        const totalBill = ordersArray.reduce((sum, o) => sum + Number(o.final_amount || 0), 0);
 
         return {
             id_session: sess.id_session,
             queue_number: sess.queue_number,
             total_bill: totalBill,
-            amount_paid: payment ? payment.amount_paid : 0,
-            change: payment ? payment.change_amount : 0,
+            amount_paid: payment ? (payment.amount_paid || 0) : 0,
+            change: payment ? (payment.change_amount || 0) : 0,
             method: payment ? payment.method : 'N/A',
             closed_at: sess.closed_at
         };
