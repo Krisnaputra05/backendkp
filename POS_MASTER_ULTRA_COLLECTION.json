@@ -1,0 +1,169 @@
+{
+	"info": {
+		"name": "POS Master Collection ULTRA (Guest, Cashier, Admin)",
+		"description": "Full System End-to-End Testing - 100% Comprehensive",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🛡️ 1. AUTH & STAFF MANAGEMENT",
+			"item": [
+				{
+					"name": "Login Kasir/Admin",
+					"event": [{ "listen": "test", "script": { "exec": [ "var jsonData = pm.response.json(); if(jsonData.success && jsonData.data.token) { pm.environment.set(\"token\", jsonData.data.token); pm.environment.set(\"current_user_id\", jsonData.data.id_user); }" ], "type": "text/javascript" } }],
+					"request": {
+						"method": "POST",
+						"body": { "mode": "raw", "raw": "{\"username\": \"kasir1\", \"password\": \"password123\"}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+					}
+				},
+				{
+					"name": "Create Staff Baru (Admin)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "POST",
+						"body": { "mode": "raw", "raw": "{\"username\": \"staff_baru\", \"password\": \"securepass\", \"role\": \"kasir\"}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/admin/users", "host": ["{{base_url}}"], "path": ["api", "admin", "users"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "🍕 2. CATALOG MANAGEMENT (Admin)",
+			"item": [
+				{
+					"name": "Get Semua Kategori",
+					"request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "method": "GET", "url": { "raw": "{{base_url}}/api/categories", "host": ["{{base_url}}"], "path": ["api", "categories"] } }
+				},
+				{
+					"name": "Tambah Produk Baru",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "POST",
+						"body": { "mode": "raw", "raw": "{\"name\": \"Nasi Goreng Spesial\", \"price\": 25000, \"category_id\": 1, \"is_available\": true}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/products", "host": ["{{base_url}}"], "path": ["api", "products"] }
+					}
+				},
+				{
+					"name": "Update Stok Produk (Available/Not)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "PUT",
+						"body": { "mode": "raw", "raw": "{\"is_available\": false}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/products/{{product_id}}", "host": ["{{base_url}}"], "path": ["api", "products", "{{product_id}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "🎟️ 3. QUEUE & SESSION (Kasir)",
+			"item": [
+				{
+					"name": "Generate Antrean QR",
+					"event": [{ "listen": "test", "script": { "exec": [ "var jsonData = pm.response.json(); if(jsonData.success) { pm.environment.set(\"session_token\", jsonData.data.session_token); pm.environment.set(\"current_session_id\", jsonData.data.id_session); }" ], "type": "text/javascript" } }],
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "POST",
+						"url": { "raw": "{{base_url}}/api/sessions", "host": ["{{base_url}}"], "path": ["api", "sessions"] }
+					}
+				},
+				{
+					"name": "Scan QR (Guest Initialize)",
+					"request": {
+						"method": "POST",
+						"body": { "mode": "raw", "raw": "{\"token\": \"{{session_token}}\"}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/sessions/scan", "host": ["{{base_url}}"], "path": ["api", "sessions", "scan"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "🍜 4. GUEST ORDERING (Multi-Order)",
+			"item": [
+				{
+					"name": "Pesanan Pertama (Guest)",
+					"event": [{ "listen": "test", "script": { "exec": [ "var jsonData = pm.response.json(); if(jsonData.success) { pm.environment.set(\"current_order_id\", jsonData.data.id_order); }" ], "type": "text/javascript" } }],
+					"request": {
+						"method": "POST",
+						"body": { "mode": "raw", "raw": "{\"session_token\": \"{{session_token}}\", \"items\": [{\"product_id\": 1, \"qty\": 2, \"notes\": \"No MSG\"}]}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/orders", "host": ["{{base_url}}"], "path": ["api", "orders"] }
+					}
+				},
+				{
+					"name": "Tambah Pesanan (Add-on)",
+					"request": {
+						"method": "POST",
+						"body": { "mode": "raw", "raw": "{\"session_token\": \"{{session_token}}\", \"items\": [{\"product_id\": 2, \"qty\": 1}]}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/orders", "host": ["{{base_url}}"], "path": ["api", "orders"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "💳 5. CASHIER CONTROL (Edit & Pay)",
+			"item": [
+				{
+					"name": "Update Status Dapur (Pending -> Processing)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "PUT",
+						"body": { "mode": "raw", "raw": "{\"status\": \"processing\"}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/orders/{{current_order_id}}/status", "host": ["{{base_url}}"], "path": ["api", "orders", "{{current_order_id}}", "status"] }
+					}
+				},
+				{
+					"name": "Edit Qty Item (Ganti ke 5)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "PUT",
+						"body": { "mode": "raw", "raw": "{\"product_id\": 1, \"qty\": 5}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/orders/{{current_order_id}}/items", "host": ["{{base_url}}"], "path": ["api", "orders", "{{current_order_id}}", "items"] }
+					}
+				},
+				{
+					"name": "Terapkan Promo Manual (Kasir)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "PUT",
+						"body": { "mode": "raw", "raw": "{\"promo_id\": 1}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/orders/{{current_order_id}}/promo", "host": ["{{base_url}}"], "path": ["api", "orders", "{{current_order_id}}", "promo"] }
+					}
+				},
+				{
+					"name": "Final Payment (Session Based)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "POST",
+						"body": { "mode": "raw", "raw": "{\"session_id\": {{current_session_id}}, \"amount_paid\": 500000, \"method\": \"cash\"}", "options": { "raw": { "language": "json" } } },
+						"url": { "raw": "{{base_url}}/api/orders/pay-session", "host": ["{{base_url}}"], "path": ["api", "orders", "pay-session"] }
+					}
+				},
+				{
+					"name": "Geterate Full Receipt (Print Struk)",
+					"request": {
+						"auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+						"method": "GET",
+						"url": { "raw": "{{base_url}}/api/orders/session/{{current_session_id}}/receipt", "host": ["{{base_url}}"], "path": ["api", "orders", "session", "{{current_session_id}}", "receipt"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "📈 6. REPORTS (Admin/Kasir Summary)",
+			"item": [
+				{
+					"name": "Today Summary (Shift)",
+					"request": { "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "method": "GET", "url": { "raw": "{{base_url}}/api/cashier/summary", "host": ["{{base_url}}"], "path": ["api", "cashier", "summary"] } }
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "base_url", "value": "http://localhost:3000" },
+		{ "key": "token", "value": "" },
+		{ "key": "session_token", "value": "" },
+		{ "key": "current_session_id", "value": "" },
+		{ "key": "current_order_id", "value": "" },
+		{ "key": "product_id", "value": "1" }
+	]
+}
