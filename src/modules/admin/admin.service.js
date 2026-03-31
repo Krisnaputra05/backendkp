@@ -70,7 +70,7 @@ exports.getStats = async (filters = {}) => {
             method,
             created_at,
             orders (
-                total_price,
+                subtotal,
                 discount_amount,
                 promo_id,
                 final_amount

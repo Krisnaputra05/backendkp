@@ -125,7 +125,6 @@ exports.createOrder = async (sessionToken, items, paymentMethod = 'cash', promoI
       session_id: session.id_session,
       status: 'pending',
       subtotal: subtotalPrice,
-      total_price: subtotalPrice, 
       promo_id: promoId || null,
       discount_amount: discountAmount,
       tax_amount: taxAmount,
