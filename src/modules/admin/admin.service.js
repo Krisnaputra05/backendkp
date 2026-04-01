@@ -176,16 +176,17 @@ exports.getHistory = async (filters = {}) => {
             queue_number,
             status,
             created_at,
-            payments (
+            payments!inner (
                 amount_paid,
                 change_amount,
-                method
+                method,
+                payment_status
             ),
             orders (
                 final_amount
             )
         `)
-        .eq('status', 'completed');
+        .eq('payments.payment_status', 'paid');
 
     if (date_start) builder = builder.gte('created_at', date_start);
     if (date_end) builder = builder.lte('created_at', date_end);
