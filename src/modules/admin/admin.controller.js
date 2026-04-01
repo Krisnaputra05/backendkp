@@ -4,6 +4,22 @@ const { successResponse, errorResponse } = require('../../utils/response');
 exports.createUser = async (req, res) => {
   try {
     const { username, password, role } = req.body;
+
+    // Validation
+    if (!username || !password) {
+      return errorResponse(res, 'Username and password are required', 400);
+    }
+
+    // Username validation: letters, numbers, spaces (capitals allowed)
+    const usernameRegex = /^[a-zA-Z0-9 ]+$/;
+    if (!usernameRegex.test(username)) {
+      return errorResponse(res, 'Username can only contain letters, numbers, and spaces', 400);
+    }
+    
+    if (password.length < 6) {
+      return errorResponse(res, 'Password must be at least 6 characters', 400);
+    }
+
     const user = await adminService.createUser(username, password, role);
     return successResponse(res, 'User created', user, 201);
   } catch (error) {

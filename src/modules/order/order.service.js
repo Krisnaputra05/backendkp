@@ -418,8 +418,7 @@ exports.processPayment = async (sessionId, amountPaid, method, userId = null) =>
     const { data: updatedSession, error: sessionUpdateErr } = await supabase
         .from('queue_sessions')
         .update({ 
-            status: 'completed',
-            closed_at: new Date().toISOString()
+            status: 'completed'
         })
         .eq('id_session', sessionId)
         .select()

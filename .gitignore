@@ -41,3 +41,4 @@ lerna-debug.log*
 *.sln
 *.sw?
 MASTER_ADMIN_API_CONTRACT.md
+CASHIER_API_README.md

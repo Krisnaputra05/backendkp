@@ -176,7 +176,6 @@ exports.getHistory = async (filters = {}) => {
             queue_number,
             status,
             created_at,
-            closed_at,
             payments (
                 amount_paid,
                 change_amount,
@@ -191,7 +190,7 @@ exports.getHistory = async (filters = {}) => {
     if (date_start) builder = builder.gte('created_at', date_start);
     if (date_end) builder = builder.lte('created_at', date_end);
 
-    const { data, error } = await builder.order('closed_at', { ascending: false });
+    const { data, error } = await builder.order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
 
@@ -212,7 +211,7 @@ exports.getHistory = async (filters = {}) => {
             amount_paid: payment ? (payment.amount_paid || 0) : 0,
             change: payment ? (payment.change_amount || 0) : 0,
             method: payment ? payment.method : 'N/A',
-            closed_at: sess.closed_at
+            closed_at: sess.created_at // Menggunakan created_at karena closed_at tidak ada di DB
         };
     });
 };

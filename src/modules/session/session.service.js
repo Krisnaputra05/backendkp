@@ -80,9 +80,7 @@ exports.verifySession = async (token) => {
 
 exports.updateStatus = async (id, status) => {
   const payload = { status };
-  if (status === "completed" || status === "cancelled") {
-    payload.closed_at = new Date().toISOString();
-  }
+  // closed_at tidak ada di DB, jadi kita tidak update field tersebut
 
   const { data, error } = await supabase
     .from("queue_sessions")
