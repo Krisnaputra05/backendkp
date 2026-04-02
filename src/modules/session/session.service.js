@@ -34,19 +34,37 @@ const SESSION_STATUS_TRANSITIONS = {
   cancelled: [],
 };
 
-exports.createSession = async () => {
+exports.createSession = async (manualQueueNumber = null) => {
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-  // 1. Get last queue number for today to increment
-  const { data: lastSession } = await supabase
-    .from("queue_sessions")
-    .select("queue_number")
-    .gte("created_at", `${today}T00:00:00`)
-    .order("queue_number", { ascending: false })
-    .limit(1)
-    .single();
+  let queueNumberToUse;
 
-  const nextQueueNumber = lastSession ? lastSession.queue_number + 1 : 1;
+  if (manualQueueNumber) {
+    // Check if the manual number already exists today (optional, but good practice)
+    const { data: existing } = await supabase
+      .from("queue_sessions")
+      .select("id_session")
+      .eq("queue_number", manualQueueNumber)
+      .gte("created_at", `${today}T00:00:00`)
+      .single();
+
+    if (existing) {
+      throw new Error(`Antrean nomor #${manualQueueNumber} sudah ada untuk hari ini`);
+    }
+    queueNumberToUse = parseInt(manualQueueNumber);
+  } else {
+    // 1. Get last queue number for today to increment
+    const { data: lastSession } = await supabase
+      .from("queue_sessions")
+      .select("queue_number")
+      .gte("created_at", `${today}T00:00:00`)
+      .order("queue_number", { ascending: false })
+      .limit(1)
+      .single();
+
+    queueNumberToUse = lastSession ? lastSession.queue_number + 1 : 1;
+  }
+
   const sessionToken = await generateUUID();
 
   // 2. Insert new session
@@ -55,7 +73,7 @@ exports.createSession = async () => {
     .insert([
       {
         session_token: sessionToken,
-        queue_number: nextQueueNumber,
+        queue_number: queueNumberToUse,
         status: "waiting",
         is_used: false,
         expired_at: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), // 4 jam default

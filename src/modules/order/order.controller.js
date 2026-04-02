@@ -7,6 +7,7 @@ exports.createOrder = async (req, res) => {
     const order = await orderService.createOrder(session_token, items, payment_method, promo_id);
     return successResponse(res, 'Order created successfully', order, 201);
   } catch (error) {
+    console.error(`[ERROR] createOrder:`, error);
     return errorResponse(res, error.message);
   }
 };

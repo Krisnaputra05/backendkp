@@ -169,6 +169,7 @@ exports.createOrder = async (
   // 5. Create Initial Payment Record (Unpaid)
   const { error: paymentError } = await supabase.from("payments").insert([
     {
+      session_id: session.id_session,
       order_id: order.id_order,
       amount_due: finalAmount,
       amount_paid: 0,
@@ -185,13 +186,13 @@ exports.createOrder = async (
   const fullOrder = await exports.findOne(order.id_order);
 
   if (io) {
-    // Room-based emit (Security)
-    io.to(`session:${session.id_session}`).emit("order:new", fullOrder);
-    // To staff only
-    io.to("role:cashier").emit("notification:new", {
-      message: `New order for queue #${session.queue_number}`,
-      orderId: order.id_order,
-    });
+  // Room-based emit (Security)
+  io.to(`session:${session.id_session}`).emit("order:new", fullOrder);
+  // To staff only
+  io.to("role:cashier").emit("notification:new", {
+    message: `New order for queue #${session.queue_number}`,
+    orderId: order.id_order,
+  });
   }
 
   return fullOrder;
@@ -394,9 +395,9 @@ exports.updateStatus = async (id, status, cancellationReason = null) => {
   if (io) {
     io.to(`session:${order.queue_sessions.id_session}`).emit(
       "order:update",
-      
       order,
     );
+  }
 
   return order;
 };

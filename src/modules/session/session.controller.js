@@ -23,7 +23,8 @@ exports.getSessionById = async (req, res) => {
 
 exports.createSession = async (req, res) => {
   try {
-    const session = await sessionService.createSession();
+    const { queue_number } = req.body;
+    const session = await sessionService.createSession(queue_number);
     return successResponse(res, 'New queue session created', session, 201);
   } catch (error) {
     return errorResponse(res, error.message);
