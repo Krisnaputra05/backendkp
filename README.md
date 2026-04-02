@@ -91,15 +91,20 @@ Semua endpoint diawali dengan prefix: `/api`
 ---
 
 ### 2. Guest (Pelanggan)
+Lihat detail lengkap di: [GUEST_API_CONTRACT.md](./GUEST_API_CONTRACT.md)
 
 **Scan QR / Validasi Session**
 - **URL**: `POST /api/guest/scan`
-- **Body**: `{ "token": "uuid-qr-token-from-table" }`
-- **Response**: Mengembalikan info meja & session jika token valid.
+- **Body**: `{ "token": "qr-token-from-table" }`
+- **Response**: Mengembalikan objek `session` (isi: `id_session`, `queue_number`, `table_id`) jika token valid.
 
-**Riwayat Pesanan Meja**
-- **URL**: `GET /api/guest/orders/:tableId`
-- **Desc**: Melihat pesanan yang pernah dibuat oleh meja tersebut (biasanya dibatasi per sesi/hari).
+**Riwayat Pesanan Sesi**
+- **URL**: `GET /api/guest/orders/:sessionId`
+- **Desc**: Melihat semua pesanan yang dibuat pelanggan dalam sesi aktif ini.
+
+**Promo Aktif**
+- **URL**: `GET /api/guest/promos`
+- **Desc**: Mengambil daftar promo yang bisa digunakan saat memesan.
 
 ---
 
@@ -156,20 +161,21 @@ Semua endpoint diawali dengan prefix: `/api`
 ### 6. Order (Pemesanan)
 
 **Buat Pesanan Baru (Guest)**
-- **URL**: `POST /api/order`
+- **URL**: `POST /api/orders`
 - **Body**:
   ```json
   {
-    "table_token": "uuid-token-meja",
+    "session_token": "token-dari-scan-qr",
     "items": [
-      { "product_id": 10, "qty": 2 },
+      { "product_id": 10, "qty": 2, "notes": "No onion" },
       { "product_id": 5, "qty": 1 }
     ],
-    "payment_method": "cash"
+    "payment_method": "cash",
+    "promo_id": 1
   }
   ```
-- **Logic**: Backend akan memvalidasi token meja, menghitung total harga berdasarkan harga produk *saat ini*, dan membuat record `orders` + `order_items` + `payments` (unpaid).
-- **Socket Emit**: `order:new`, `notification:new`
+- **Logic**: Backend memvalidasi session, menghitung total (termasuk pajak/service/promo), dan membuat record `orders` + `order_items` + `payments`.
+- **Socket Emit**: `order:new` (to cashier), `order:new` (to session room)
 
 **List Pesanan (Kasir/Admin)**
 - **URL**: `GET /api/order`

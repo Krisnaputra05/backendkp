@@ -27,7 +27,8 @@ const initSocket = (server) => {
 
 const getIO = () => {
   if (!io) {
-    throw new Error('Socket.io not initialized!');
+    console.warn('Socket.io not initialized (Expected on Vercel/Serverless)');
+    return null;
   }
   return io;
 };

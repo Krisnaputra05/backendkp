@@ -27,6 +27,13 @@ exports.findOne = async (id) => {
   return data;
 };
 
+const SESSION_STATUS_TRANSITIONS = {
+  waiting: ["active", "cancelled"],
+  active: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
 exports.createSession = async () => {
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
@@ -50,6 +57,8 @@ exports.createSession = async () => {
         session_token: sessionToken,
         queue_number: nextQueueNumber,
         status: "waiting",
+        is_used: false,
+        expired_at: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), // 4 jam default
       },
     ])
     .select()
@@ -69,18 +78,57 @@ exports.verifySession = async (token) => {
   if (error || !data)
     throw new Error("Sesi antrean tidak valid atau QR kadaluarsa");
 
+  if (data.expired_at && new Date(data.expired_at) < new Date()) {
+    throw new Error(`Sesi antrean #${data.queue_number} sudah kadaluarsa`);
+  }
+
+  if (data.is_used) {
+    throw new Error(`Sesi antrean #${data.queue_number} sudah digunakan`);
+  }
+
   if (data.status === "completed" || data.status === "cancelled") {
     throw new Error(
       `Sesi antrean #${data.queue_number} sudah berakhir (${data.status})`,
     );
   }
 
+  // Set active on first scan when still waiting
+  if (data.status === "waiting") {
+    const { data: updated, error: updateErr } = await supabase
+      .from("queue_sessions")
+      .update({ status: "active", is_used: true })
+      .eq("id_session", data.id_session)
+      .eq("status", "waiting")
+      .select()
+      .single();
+
+    if (updateErr) throw new Error(updateErr.message);
+    return updated;
+  }
+
   return data;
 };
 
 exports.updateStatus = async (id, status) => {
+  // validate transition
+  const { data: current, error: fetchErr } = await supabase
+    .from("queue_sessions")
+    .select("status")
+    .eq("id_session", id)
+    .single();
+
+  if (fetchErr || !current) throw new Error("Session not found");
+
+  const allowed = SESSION_STATUS_TRANSITIONS[current.status] || [];
+  if (!allowed.includes(status)) {
+    throw new Error(
+      `Cannot transition status from '${current.status}' to '${status}'. Allowed: [${
+        allowed.join(", ") || "none"
+      }]`,
+    );
+  }
+
   const payload = { status };
-  // closed_at tidak ada di DB, jadi kita tidak update field tersebut
 
   const { data, error } = await supabase
     .from("queue_sessions")
