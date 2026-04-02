@@ -26,4 +26,7 @@ router.post('/pay-session', orderController.submitPayment);
 // Session-based Receipt Data
 router.get('/session/:id/receipt', orderController.getSessionReceipt);
 
+// Thermal Print Ready Data (New)
+router.get('/:id/print', orderController.getPrintData);
+
 module.exports = router;

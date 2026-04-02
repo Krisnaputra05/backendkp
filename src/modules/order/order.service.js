@@ -593,3 +593,57 @@ exports.getFullSessionReceipt = async (sessionId) => {
     },
   };
 };
+
+exports.getPrintData = async (orderId) => {
+  // 1. Ambil data order lengkap dengan items, products, dan payments
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select(`
+      *,
+      order_items (
+        qty,
+        price_at_purchase,
+        subtotal,
+        products (name)
+      ),
+      payments (*)
+    `)
+    .eq("id_order", orderId)
+    .single();
+
+  if (error || !order) throw new Error("Order not found");
+
+  // 2. Validasi Pembayaran (Hanya allow jika sudah paid)
+  // Catatan: Jika pembayaran dilakukan per sesi, kita cari payment yang terkait dengan session_id ini
+  const payment = order.payments.find(p => p.payment_status === "paid") || 
+                  (await supabase.from("payments").select("*").eq("session_id", order.session_id).eq("payment_status", "paid").maybeSingle()).data;
+
+  if (!payment) {
+    throw new Error("Cannot print receipt: Payment not found or not paid yet.");
+  }
+
+  // 3. Transformasi data siap print (Clean JSON)
+  return {
+    order_code: order.order_code,
+    created_at: order.created_at,
+    items: order.order_items.map(item => ({
+      name: item.products.name,
+      qty: item.qty,
+      price: Number(item.price_at_purchase),
+      subtotal: Number(item.subtotal)
+    })),
+    subtotal: Number(order.subtotal),
+    tax: Number(order.tax_amount),
+    service: Number(order.service_charge),
+    final_amount: Number(order.final_amount),
+    payment: {
+      method: payment.method,
+      amount_paid: Number(payment.amount_paid),
+      change_amount: Number(payment.change_amount),
+      status: payment.payment_status,
+      paid_at: payment.paid_at,
+      cashier_id: payment.user_id
+    },
+    qr_value: order.order_code // Digunakan untuk scan audit di struk
+  };
+};
