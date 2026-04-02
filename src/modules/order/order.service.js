@@ -20,25 +20,31 @@ const getSettings = async () => {
 };
 
 exports.findAll = async (filters = {}) => {
+  // Hanya ambil data ringkas untuk tampilan list agar performa lebih kencang
   let builder = supabase
     .from("orders")
-    .select(
-      `
-      *,
-      queue_sessions (queue_number),
-      order_items (
-        *,
-        products (name, image_url)
-      ),
-      payments (*)
-    `,
-    )
-    .is("deleted_at", null) // exclude soft-deleted orders
+    .select(`
+      id_order,
+      order_code,
+      id_order,
+      status,
+      final_amount,
+      created_at,
+      queue_sessions (queue_number)
+    `)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (filters.status) {
-    builder = builder.eq("status", filters.status);
+    // Sinkronisasi status dari UI ke Database (Mapping)
+    let dbStatus = filters.status;
+    if (filters.status === 'confirmed') dbStatus = 'processing'; // misal: confirmed dianggap sedang diproses
+    if (filters.status === 'dapur') dbStatus = 'processing';
+    if (filters.status === 'selesai') dbStatus = 'completed';
+    
+    builder = builder.eq("status", dbStatus);
   }
+
   if (filters.session_id) {
     builder = builder.eq("session_id", filters.session_id);
   }
@@ -255,10 +261,13 @@ exports.cancelOrder = async (
 };
 
 exports.updateOrderItem = async (orderId, productId, newQty) => {
-  if (newQty <= 0)
-    throw new Error(
-      "Qty must be greater than 0. Use cancel or delete for removal.",
-    );
+  // 0. Cek Status Order (Hanya boleh jika belum selesai)
+  const order = await exports.findOne(orderId);
+  if (['completed', 'cancelled'].includes(order.status)) {
+    throw new Error(`Cannot edit item. Order is already ${order.status}`);
+  }
+
+  if (newQty <= 0) throw new Error("Qty must be > 0. Use DELETE to remove item.");
 
   // 1. Get Product Price
   const product = await productService.findOne(productId);
@@ -279,6 +288,63 @@ exports.updateOrderItem = async (orderId, productId, newQty) => {
   if (itemErr) throw new Error(itemErr.message);
 
   // 3. Recalculate Order Totals
+  return await exports.recalculateOrderTotals(orderId);
+};
+
+exports.addItemToOrder = async (orderId, productId, qty, notes = null) => {
+  // 0. Cek Status Order
+  const order = await exports.findOne(orderId);
+  if (['completed', 'cancelled'].includes(order.status)) {
+    throw new Error(`Cannot add item. Order is already ${order.status}`);
+  }
+
+  const product = await productService.findOne(productId);
+  if (!product || !product.is_available) throw new Error("Product unavailable");
+
+  const subtotal = qty * Number(product.price);
+
+  // 1. Upsert: Jika item sudah ada, tambah qty-nya. Jika belum, insert baru.
+  const { data: existingItem } = await supabase
+    .from("order_items")
+    .select("*")
+    .eq("order_id", orderId)
+    .eq("product_id", productId)
+    .maybeSingle();
+
+  if (existingItem) {
+    const newQty = existingItem.qty + parseInt(qty);
+    await supabase.from("order_items")
+      .update({ qty: newQty, subtotal: newQty * Number(product.price) })
+      .eq("id_order_item", existingItem.id_order_item);
+  } else {
+    await supabase.from("order_items").insert([{
+      order_id: orderId,
+      product_id: productId,
+      qty: qty,
+      price_at_purchase: product.price,
+      subtotal: subtotal,
+      notes: notes
+    }]);
+  }
+
+  return await exports.recalculateOrderTotals(orderId);
+};
+
+exports.removeItemFromOrder = async (orderId, productId) => {
+  // 0. Cek Status Order
+  const order = await exports.findOne(orderId);
+  if (['completed', 'cancelled'].includes(order.status)) {
+     throw new Error(`Cannot remove item. Order is already ${order.status}`);
+  }
+
+  const { error } = await supabase
+    .from("order_items")
+    .delete()
+    .eq("order_id", orderId)
+    .eq("product_id", productId);
+
+  if (error) throw new Error(error.message);
+
   return await exports.recalculateOrderTotals(orderId);
 };
 

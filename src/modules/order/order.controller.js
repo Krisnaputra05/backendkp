@@ -78,6 +78,27 @@ exports.updateItemQty = async (req, res) => {
   }
 };
 
+exports.addItem = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { product_id, qty, notes } = req.body;
+        const order = await orderService.addItemToOrder(id, product_id, qty, notes);
+        return successResponse(res, 'Item added to order', order);
+    } catch (error) {
+        return errorResponse(res, error.message);
+    }
+};
+
+exports.removeItem = async (req, res) => {
+    try {
+        const { id, productId } = req.params;
+        const order = await orderService.removeItemFromOrder(id, productId);
+        return successResponse(res, 'Item removed from order', order);
+    } catch (error) {
+        return errorResponse(res, error.message);
+    }
+};
+
 exports.applyPromo = async (req, res) => {
   try {
     const { id } = req.params; // order id

@@ -18,6 +18,8 @@ router.put('/:id/status', orderController.updateOrderStatus);
 // New Advanced Cashier Features
 router.put('/:id/cancel', orderController.cancelOrder);
 router.put('/:id/items', orderController.updateItemQty);
+router.post('/:id/items', orderController.addItem);
+router.delete('/:id/items/:productId', orderController.removeItem);
 router.put('/:id/promo', orderController.applyPromo);
 
 // Session-based Payment
