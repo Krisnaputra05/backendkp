@@ -397,7 +397,6 @@ exports.updateStatus = async (id, status, cancellationReason = null) => {
       
       order,
     );
-  }
 
   return order;
 };
