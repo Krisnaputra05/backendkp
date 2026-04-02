@@ -14,7 +14,17 @@ exports.getAllSessions = async (req, res) => {
 exports.getSessionById = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Validasi: Pastikan ID adalah angka
+    if (!id || isNaN(id) || id === 'undefined') {
+      return errorResponse(res, 'ID Sesi tidak valid', 400);
+    }
+
     const session = await sessionService.findOne(id);
+    if (!session) {
+      return errorResponse(res, 'Sesi antrean tidak ditemukan', 404);
+    }
+
     return successResponse(res, 'Session detail retrieved', session);
   } catch (error) {
     return errorResponse(res, error.message);

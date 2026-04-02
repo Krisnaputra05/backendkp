@@ -21,7 +21,7 @@ exports.findOne = async (id) => {
     .from("queue_sessions")
     .select("*, orders(*, order_items(*, products(*)))")
     .eq("id_session", id)
-    .single();
+    .maybeSingle(); // Menggunakan maybeSingle agar tidak error jika data tidak ada
 
   if (error) throw new Error(error.message);
   return data;
