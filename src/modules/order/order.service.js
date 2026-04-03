@@ -490,6 +490,11 @@ exports.processPayment = async (
   if (session.status === "completed")
     throw new Error("Session already completed");
 
+  // VALIDASI: Cegah transaksi jika pelanggan BELUM pesan apapun
+  if (!session.orders || session.orders.length === 0) {
+    throw new Error("Pelanggan belum memesan apapun. Mohon buat pesanan terlebih dahulu.");
+  }
+
   // BUSINESS RULE: Hanya pesanan yang aktif (termasuk pending) yang bisa dibayar
   const activeOrders = session.orders.filter((o) =>
     ["pending", "processing", "ready"].includes(o.status),
@@ -497,7 +502,7 @@ exports.processPayment = async (
 
   if (activeOrders.length === 0) {
     throw new Error(
-      "Tidak ada pesanan yang siap dibayar (Pesanan harus berstatus Pending, Processing, atau Ready)",
+      "Tidak ada pesanan aktif (Pending/Processing/Ready) yang bisa dibayar. Periksa kembali status pesanan.",
     );
   }
 
