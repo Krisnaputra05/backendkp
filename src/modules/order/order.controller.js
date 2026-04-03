@@ -25,8 +25,8 @@ exports.getAllOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!id || isNaN(id) || id === 'undefined') {
-            return errorResponse(res, 'ID Pesanan tidak valid', 400);
+        if (!id || id === 'undefined') {
+            return errorResponse(res, 'ID atau Kode Pesanan tidak valid', 400);
         }
         const order = await orderService.findOne(id);
         if (!order) return errorResponse(res, 'Pesanan tidak ditemukan', 404);

@@ -204,8 +204,8 @@ exports.createOrder = async (
   return fullOrder;
 };
 
-exports.findOne = async (id) => {
-  const { data, error } = await supabase
+exports.findOne = async (idOrCode) => {
+  let query = supabase
     .from("orders")
     .select(
       `
@@ -217,9 +217,16 @@ exports.findOne = async (id) => {
       ),
       payments (*)
     `,
-    )
-    .eq("id_order", id)
-    .single();
+    );
+
+  // Jika input adalah angka, cari berdasarkan ID. Jika teks, cari berdasarkan Kode.
+  if (isNaN(idOrCode)) {
+    query = query.eq("order_code", idOrCode);
+  } else {
+    query = query.eq("id_order", idOrCode);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw new Error(error.message);
   return data;
