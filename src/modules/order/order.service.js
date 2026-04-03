@@ -490,15 +490,14 @@ exports.processPayment = async (
   if (session.status === "completed")
     throw new Error("Session already completed");
 
-  // POSTPAID BUSINESS RULE: Only completed/ready orders can be paid
-  // Order 'pending' means it might not even be cooked yet.
+  // BUSINESS RULE: Hanya pesanan yang aktif (termasuk pending) yang bisa dibayar
   const activeOrders = session.orders.filter((o) =>
-    ["processing", "ready"].includes(o.status),
+    ["pending", "processing", "ready"].includes(o.status),
   );
 
   if (activeOrders.length === 0) {
     throw new Error(
-      "No orders ready for payment (Must be Processing or Ready)",
+      "Tidak ada pesanan yang siap dibayar (Pesanan harus berstatus Pending, Processing, atau Ready)",
     );
   }
 
