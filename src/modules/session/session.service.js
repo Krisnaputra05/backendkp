@@ -2,9 +2,12 @@ const supabase = require("../../config/supabase");
 const { generateUUID } = require("../../utils/uuid");
 
 exports.findAll = async (filters = {}) => {
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
   let builder = supabase
     .from("queue_sessions")
     .select("*")
+    .gte("created_at", `${today}T00:00:00`) // Hanya ambil antrean hari ini
     .order("created_at", { ascending: false });
 
   if (filters.status) {

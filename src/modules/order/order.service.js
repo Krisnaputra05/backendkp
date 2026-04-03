@@ -565,14 +565,15 @@ exports.processPayment = async (
 
   if (orderUpdateErr) throw new Error(orderUpdateErr.message);
 
-  // ── 4. Update Session to completed (only active sessions) ────────────────
+  // ── 4. Update Session to completed (dari status apapun yang belum selesai) ──
   const { data: updatedSession, error: sessionUpdateErr } = await supabase
     .from("queue_sessions")
     .update({
       status: "completed",
+      is_used: true
     })
     .eq("id_session", sessionId)
-    .eq("status", "active")
+    .in("status", ["waiting", "active"]) // Selesaikan baik yang sudah discan maupun belum
     .select()
     .single();
 
