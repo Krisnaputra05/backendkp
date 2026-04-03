@@ -137,7 +137,20 @@ exports.createOrder = async (
   const finalAmount = validSubtotal + taxAmount + serviceCharge;
 
   // 3. Create Order
-  const orderCode = `ORD-${Date.now()}`;
+  // Generate unique order code with prefix ORD- and 5 digits
+  let orderCode;
+  let isUnique = false;
+  while (!isUnique) {
+    const randomDigits = Math.floor(10000 + Math.random() * 90000).toString();
+    orderCode = `ORD-${randomDigits}`;
+    const { data: existing } = await supabase
+      .from("orders")
+      .select("id_order")
+      .eq("order_code", orderCode)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!existing) isUnique = true;
+  }
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -219,11 +232,27 @@ exports.findOne = async (idOrCode) => {
     `,
     );
 
-  // Jika input adalah angka, cari berdasarkan ID. Jika teks, cari berdasarkan Kode.
+  // Prioritaskan order_code jika input numerik dengan panjang 5 (format baru) atau jika teks (format lengkap)
   if (isNaN(idOrCode)) {
     query = query.eq("order_code", idOrCode);
   } else {
-    query = query.eq("id_order", idOrCode);
+    // Jika numeric string sepanjang 5 digit, tambahkan prefix 'ORD-' dan cek order_code
+    if (idOrCode.toString().length === 5) {
+      const formattedCode = `ORD-${idOrCode}`;
+      const { data: codeMatch } = await supabase
+        .from("orders")
+        .select("id_order")
+        .eq("order_code", formattedCode)
+        .maybeSingle();
+
+      if (codeMatch) {
+         query = query.eq("order_code", formattedCode);
+      } else {
+         query = query.eq("id_order", idOrCode);
+      }
+    } else {
+      query = query.eq("id_order", idOrCode);
+    }
   }
 
   const { data, error } = await query.maybeSingle();
