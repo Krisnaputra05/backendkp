@@ -194,7 +194,7 @@ exports.createOrder = async (
       amount_paid: 0,
       payment_status: "unpaid",
       method: paymentMethod,
-      // kalau tidak error berarti berhasil kalo error (disini awalnya ada user_id tapi dihapus)
+      user_id: 1, // Default to admin/system user to bypass NOT NULL constraint for guests
     },
   ]);
 
