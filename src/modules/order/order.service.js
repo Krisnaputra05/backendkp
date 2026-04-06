@@ -194,7 +194,7 @@ exports.createOrder = async (
       amount_paid: 0,
       payment_status: "unpaid",
       method: paymentMethod,
-      user_id: null,
+      // kalau tidak error berarti berhasil kalo error (disini awalnya ada user_id tapi dihapus)
     },
   ]);
 
