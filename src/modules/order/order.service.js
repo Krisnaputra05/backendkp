@@ -573,11 +573,15 @@ exports.processPayment = async (
   const changeAmount = method === "cash" ? Math.max(0, paid - amountDue) : 0;
 
   // ── 2. Insert Payment Record (Linked to Session) ──────────────────────────
+  // order_id wajib diisi (NOT NULL) — gunakan order pertama sebagai referensi utama
+  const primaryOrderId = billableOrders[0].id_order;
+
   const { data: payment, error: payError } = await supabase
     .from("payments")
     .insert([
       {
         session_id: sessionId,
+        order_id: primaryOrderId,
         method: method,
         amount_due: amountDue,
         amount_paid: paid,
