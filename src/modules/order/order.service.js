@@ -531,18 +531,25 @@ exports.processPayment = async (
     throw new Error("Pelanggan belum memesan apapun. Mohon buat pesanan terlebih dahulu.");
   }
 
-  // BUSINESS RULE: Hanya pesanan yang aktif (termasuk pending) yang bisa dibayar
+  // Ambil semua order yang relevan untuk pembayaran:
+  // Prioritas utama: order dengan status aktif (pending/processing/ready)
+  // Fallback: jika semua sudah completed (misal karena race condition), gunakan completed
   const activeOrders = session.orders.filter((o) =>
     ["pending", "processing", "ready"].includes(o.status),
   );
 
-  if (activeOrders.length === 0) {
+  // Order yang akan dijadikan basis kalkulasi (aktif atau semua non-cancelled)
+  const billableOrders = activeOrders.length > 0
+    ? activeOrders
+    : session.orders.filter((o) => o.status !== "cancelled");
+
+  if (billableOrders.length === 0) {
     throw new Error(
-      "Tidak ada pesanan aktif (Pending/Processing/Ready) yang bisa dibayar. Periksa kembali status pesanan.",
+      "Tidak ada pesanan yang bisa ditagih. Semua pesanan telah dibatalkan.",
     );
   }
 
-  const amountDue = activeOrders.reduce(
+  const amountDue = billableOrders.reduce(
     (sum, order) => sum + Number(order.final_amount),
     0,
   );
@@ -585,14 +592,20 @@ exports.processPayment = async (
 
   if (payError) throw new Error(payError.message);
 
-  // ── 3. Update all active orders to completed ─────────────────────────────
-  const orderIds = activeOrders.map((o) => o.id_order);
-  const { error: orderUpdateErr } = await supabase
-    .from("orders")
-    .update({ status: "completed" })
-    .in("id_order", orderIds);
+  // ── 3. Update all billable active orders to completed ────────────────────
+  // Hanya update order yang statusnya belum completed (hindari redundant update)
+  const orderIdsToComplete = billableOrders
+    .filter((o) => o.status !== "completed")
+    .map((o) => o.id_order);
 
-  if (orderUpdateErr) throw new Error(orderUpdateErr.message);
+  if (orderIdsToComplete.length > 0) {
+    const { error: orderUpdateErr } = await supabase
+      .from("orders")
+      .update({ status: "completed" })
+      .in("id_order", orderIdsToComplete);
+
+    if (orderUpdateErr) throw new Error(orderUpdateErr.message);
+  }
 
   // ── 4. Update Session to completed (dari status apapun yang belum selesai) ──
   const { data: updatedSession, error: sessionUpdateErr } = await supabase
@@ -602,12 +615,11 @@ exports.processPayment = async (
       is_used: true
     })
     .eq("id_session", sessionId)
-    .in("status", ["waiting", "active"]) // Selesaikan baik yang sudah discan maupun belum
     .select()
     .single();
 
-  if (sessionUpdateErr || !updatedSession) {
-    throw new Error("Failed to complete session (session may not be active)");
+  if (sessionUpdateErr) {
+    throw new Error("Failed to complete session: " + sessionUpdateErr.message);
   }
 
   // ── 5. Emit Realtime Events (Room-based) ─────────────────────────────────
