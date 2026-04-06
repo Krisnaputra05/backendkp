@@ -103,9 +103,9 @@ exports.verifySession = async (token) => {
     throw new Error(`Sesi antrean #${data.queue_number} sudah kadaluarsa`);
   }
 
-  if (data.is_used) {
-    throw new Error(`Sesi antrean #${data.queue_number} sudah digunakan`);
-  }
+  // if (data.is_used) {
+  //   throw new Error(`Sesi antrean #${data.queue_number} sudah digunakan`);
+  // }
 
   if (data.status === "completed" || data.status === "cancelled") {
     throw new Error(
