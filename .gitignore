@@ -6,6 +6,12 @@ node_modules
 # Testing
 coverage
 .nyc_output
+.env.test
+README.md
+TESTING_GUIDE.md
+tests
+__tests__
+temp
 
 # Production
 build
@@ -43,3 +49,6 @@ lerna-debug.log*
 MASTER_ADMIN_API_CONTRACT.md
 CASHIER_API_README.md
 GUEST_API_CONTRACT.md
+README_PROJECT.md
+API_CONTRACT.md
+README.md
